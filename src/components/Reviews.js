@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
+import emailjs from 'emailjs-com';
 import './Reviews.css';
+
+// Initialize EmailJS (you'll need to replace these with your actual EmailJS credentials)
+emailjs.init("OlRy5tteWZSyczjtW"); // Replace with your EmailJS public key
 
 const Reviews = () => {
   const [reviews, setReviews] = useState([
@@ -12,8 +16,11 @@ const Reviews = () => {
   const [newReview, setNewReview] = useState({
     name: '',
     rating: 5,
-    comment: ''
+    comment: '',
+    email: '' // Added email field
   });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -23,24 +30,52 @@ const Reviews = () => {
     });
   };
   
-  const handleSubmitReview = (e) => {
+  const handleSubmitReview = async (e) => {
     e.preventDefault();
-    const reviewToAdd = {
-      id: reviews.length + 1,
-      name: newReview.name,
-      rating: parseInt(newReview.rating),
-      comment: newReview.comment,
-      date: new Date().toISOString().split('T')[0]
-    };
+    setIsSubmitting(true);
     
-    setReviews([...reviews, reviewToAdd]);
-    setNewReview({
-      name: '',
-      rating: 5,
-      comment: ''
-    });
-    
-    alert('Thank you for your review!');
+    try {
+      // Prepare email template parameters
+      const templateParams = {
+        from_name: newReview.name,
+        from_email: newReview.email,
+        rating: newReview.rating,
+        comment: newReview.comment,
+        to_email: 'your-email@example.com', // Replace with your email
+        date: new Date().toLocaleDateString()
+      };
+
+      // Send email using EmailJS
+      await emailjs.send(
+        'service_xmgogg7', // Replace with your EmailJS service ID
+        'template_0rdp06j', // Replace with your EmailJS template ID
+        templateParams
+      );
+
+      // Add to local state for immediate display
+      const reviewToAdd = {
+        id: reviews.length + 1,
+        name: newReview.name,
+        rating: parseInt(newReview.rating),
+        comment: newReview.comment,
+        date: new Date().toISOString().split('T')[0]
+      };
+      
+      setReviews([...reviews, reviewToAdd]);
+      setNewReview({
+        name: '',
+        rating: 5,
+        comment: '',
+        email: ''
+      });
+      
+      alert('Thank you for your review! We\'ve received it and will consider publishing it.');
+    } catch (error) {
+      console.error('Failed to send review:', error);
+      alert('There was an error submitting your review. Please try again later.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   return (
@@ -78,6 +113,18 @@ const Reviews = () => {
               />
             </div>
             <div className="form-group">
+              <label htmlFor="email">Your Email</label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                className="form-control"
+                value={newReview.email}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+            <div className="form-group">
               <label htmlFor="rating">Rating</label>
               <select
                 id="rating"
@@ -104,7 +151,13 @@ const Reviews = () => {
                 required
               ></textarea>
             </div>
-            <button type="submit" className="btn">Submit Review</button>
+            <button 
+              type="submit" 
+              className="btn"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Submitting...' : 'Submit Review'}
+            </button>
           </form>
         </div>
       </div>
